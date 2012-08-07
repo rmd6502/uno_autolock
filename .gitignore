@@ -10,3 +10,12 @@
 *.lai
 *.la
 *.a
+
+# avr-gcc files
+*.hex
+*.eep
+*.d
+*.elf
+*.lss
+*.map
+*.sym
