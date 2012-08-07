@@ -259,8 +259,8 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 }
 
 void PIR_Changed(uint8_t new_value) {
-  uint8_t moved = digitalRead(sensor);
-  digitalWrite(led, moved);
+  uint8_t moved = new_value;
+  LEDs_SetAllLEDs(moved ? LEDS_LED1 : LEDS_NO_LEDS);
   if (moved) {
     lastMotion = millis;
     if (isLocked && mode == NONE) {
