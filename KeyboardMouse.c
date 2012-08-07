@@ -38,6 +38,16 @@
 #include "Timer.h"
 #include "PIR.h"
 
+static const int NO_MOVE_THRESHOLD_MS = 60000;
+static const int LOCK_TIME_MS = 100;
+static const int UNLOCK_TIME_MS = 25;
+enum Mode { NONE=0, LOCKING, UNLOCKING };
+volatile uint8_t isLocked;
+volatile uint32_t lastMotion;
+volatile uint32_t modeTimer;
+volatile uint8_t mode;
+void PIR_Changed(uint8_t new_value);
+
 /** Buffer to hold the previously generated Keyboard HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevKeyboardHIDReportBuffer[sizeof(USB_KeyboardReport_Data_t)];
 
@@ -93,6 +103,9 @@ USB_ClassInfo_HID_Device_t Mouse_HID_Interface =
 int main(void)
 {
 	SetupHardware();
+
+    service_routine = &PIR_Changed;
+    mode = NONE;
 
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	sei();
@@ -181,6 +194,8 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	/* Determine which interface must have its report generated */
 	if (HIDInterfaceInfo == &Keyboard_HID_Interface)
 	{
+        return 0;
+
 		USB_KeyboardReport_Data_t* KeyboardReport = (USB_KeyboardReport_Data_t*)ReportData;
 
 		KeyboardReport->Modifier = HID_KEYBOARD_MODIFIER_LEFTSHIFT;
@@ -193,11 +208,18 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	else
 	{
 		USB_MouseReport_Data_t* MouseReport = (USB_MouseReport_Data_t*)ReportData;
+        if (mode == NONE) return 0;
+        if (modeTimer <= millis) {
+            mode = NONE;
+            return 0;
+        }
 
-		  return 0;
-
-		  MouseReport->Y = -1;
-		  MouseReport->X = -1;
+          if (mode == LOCKING) {
+		    MouseReport->Y = 10;
+		    MouseReport->X = -10;
+          } else {
+            MouseReport->Button = 2;
+          }
 
 		*ReportSize = sizeof(USB_MouseReport_Data_t);
 		return true;
@@ -236,4 +258,21 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 	}
 }
 
-
+void PIR_Changed(uint8_t new_value) {
+  uint8_t moved = digitalRead(sensor);
+  digitalWrite(led, moved);
+  if (moved) {
+    lastMotion = millis;
+    if (isLocked && mode == NONE) {
+      mode = UNLOCKING;
+      modeTimer = millis + UNLOCK_TIME_MS;
+      isLocked = 0;
+    }
+  } else {
+    if (!isLocked && mode == NONE && millis - lastMotion >= NO_MOVE_THRESHOLD_MS) {
+      mode = LOCKING;
+      modeTimer = millis + LOCK_TIME_MS;
+      isLocked = 1;
+    }
+  }
+}

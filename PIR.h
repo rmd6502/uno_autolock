@@ -4,7 +4,7 @@
 
 void PIR_Init(void);
 extern volatile uint8_t PIR_State;
-typedef void(*PIR_Changed)(uint8_t new_value);
-extern PIR_Changed service_routine;
+typedef void(*CALLBACK_PIR_Changed)(uint8_t new_value);
+extern CALLBACK_PIR_Changed service_routine;
 
 #endif
