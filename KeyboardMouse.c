@@ -38,6 +38,9 @@
 #include "Timer.h"
 #include "PIR.h"
 
+void pir_value(uint8_t newvalue);
+static volatile uint32_t lastMoved = 0;
+
 /** Buffer to hold the previously generated Keyboard HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevKeyboardHIDReportBuffer[sizeof(USB_KeyboardReport_Data_t)];
 
@@ -120,6 +123,8 @@ void SetupHardware()
 	USB_Init();
     PIR_Init();
     Timer_Init();
+
+    service_routine = &pir_value;
 }
 
 /** Event handler for the library USB Connection event. */
@@ -236,4 +241,16 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 	}
 }
 
-
+void pir_value(uint8_t newvalue) {
+    LEDs_SetAllLEDs(newvalue ? LEDS_LED1 : LEDS_NO_LEDS);
+    if (newvalue) {
+        lastMoved = millis;
+        if (isLocked) {
+            isLocked = 0;
+        }
+    } else {
+        if (!isLocked && millis - lastMoved >= NO_MOVE_THRESHOLD_MS) {
+            isLocked = 1;
+        }
+    }
+}
