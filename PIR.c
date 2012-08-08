@@ -3,7 +3,7 @@
 #include "PIR.h"
 
 volatile uint8_t PIR_State = 0;
-PIR_Changed service_routine = 0;
+CALLBACK_PIR_Changed service_routine = 0;
 
 void PIR_Init() {
     cli();
