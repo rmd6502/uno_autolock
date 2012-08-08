@@ -134,7 +134,7 @@ void SetupHardware()
     PIR_Init();
     Timer_Init();
 
-    service_routine = &pir_value;
+    service_routine = &PIR_Changed;
 }
 
 /** Event handler for the library USB Connection event. */
